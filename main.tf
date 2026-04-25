@@ -16,6 +16,14 @@ terraform {
       source  = "hashicorp/tls"
       version = ">= 4.0.0"
     }
+    auth0 = {
+      source  = "auth0/auth0"
+      version = ">= 1.0.0"
+    }
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.0"
+    }
   }
 }
 

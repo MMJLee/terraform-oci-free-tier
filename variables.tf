@@ -125,6 +125,144 @@ variable "cloudflare_ipv6" {
   ]
 }
 
+# --- Auth0 (optional) ---
+
+variable "enable_auth0" {
+  type        = bool
+  default     = false
+  description = "Create Auth0 SPA + M2M clients, API resource server, roles, and post-login JWT action"
+}
+
+variable "auth0_api_audience" {
+  type        = string
+  default     = ""
+  description = "Auth0 API identifier (audience claim) — e.g., https://api.example.com"
+}
+
+variable "auth0_jwt_namespace" {
+  type        = string
+  default     = ""
+  description = "Custom-claim namespace prefix injected into JWTs by the post-login action — e.g., https://app.example.com. Must match what your backend reads."
+}
+
+variable "auth0_callback_urls" {
+  type        = list(string)
+  default     = []
+  description = "Allowed callback / logout / web-origin URLs for the SPA client"
+}
+
+variable "auth0_admin_user_id" {
+  type        = string
+  default     = ""
+  description = "Auth0 user_id (e.g., auth0|abc123) auto-assigned the admin role. Empty to skip."
+}
+
+variable "auth0_spa_name" {
+  type    = string
+  default = "SPA"
+}
+
+variable "auth0_m2m_name" {
+  type    = string
+  default = "Terraform (M2M)"
+}
+
+variable "auth0_api_name" {
+  type    = string
+  default = "API"
+}
+
+# --- GitHub Actions secret sync (optional) ---
+
+variable "enable_github" {
+  type        = bool
+  default     = false
+  description = "Sync OCI auth + module outputs (per-instance IPs, vault OCIDs, DB OCIDs, etc.) to GitHub Actions secrets"
+}
+
+variable "github_owner" {
+  type        = string
+  default     = ""
+  description = "GitHub username or org that owns the repo"
+}
+
+variable "github_repo" {
+  type        = string
+  default     = ""
+  description = "GitHub repository name"
+}
+
+variable "github_secrets" {
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+  description = "Additional Actions secrets to set on top of the auto-derived ones. Keys become secret names verbatim."
+}
+
+# Inputs that get auto-merged into the GitHub Actions secrets map when enable_github = true.
+# All optional — only included in the map if set.
+
+variable "oci_user_ocid" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "oci_fingerprint" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "oci_private_key" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "OCI API private key contents (not a path)"
+}
+
+variable "ssh_private_key" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "SSH private key contents (used by CI/CD to deploy to instances). Synced as SSH_PRIVATE_KEY."
+}
+
+variable "ip_address" {
+  type        = string
+  default     = ""
+  description = "Public IP (CIDR) of CI runner / dev machine for SSH access. Synced as IP_ADDRESS."
+}
+
+variable "auth0_domain" {
+  type    = string
+  default = ""
+}
+
+variable "auth0_client_id" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "auth0_client_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "auth0_m2m_client_id" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "auth0_m2m_client_secret" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
 # --- Tags ---
 
 variable "project_name" {

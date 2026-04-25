@@ -12,6 +12,8 @@ Reusable Terraform module for OCI Always Free tier infrastructure. Deploys ARM c
 - **Security** — Public/private security lists, SSH access, per-instance app port ingress
 - **Quota** — Free tier enforcement (4 ARM OCPUs, 2 AMD micros, 200GB storage)
 - **Cloudflare** (optional) — Load balancer, origin CA certificate, DNS records, strict SSL
+- **Auth0** (optional) — SPA + M2M clients, API resource server with admin scope, admin/user roles, post-login JWT action
+- **GitHub Actions secret sync** (optional) — auto-pushes OCI auth, SSH keys, Cloudflare/Auth0 creds, and infrastructure outputs (per-instance `<NAME>_IP`, per-database `<KEY>_DB_OCID`, vault, OS namespace) into a GitHub repo's Actions secrets
 
 ## Prerequisites
 
@@ -125,11 +127,60 @@ module "infra" {
 
 ### With Auth0 + GitHub Actions secret sync
 
-For a complete, working configuration that wires the module together with Auth0 (SPA + M2M clients, roles, post-login action) and GitHub Actions secret sync, see [`examples/with-auth0-and-github/`](examples/with-auth0-and-github/).
+Both features live inside the module — flip `enable_auth0 = true` and/or `enable_github = true`, pass the inputs.
+
+```hcl
+module "infra" {
+  source = "github.com/MMJLee/terraform-oci-free-tier"
+
+  tenancy_ocid   = var.TENANCY_OCID
+  region         = var.REGION
+  ssh_public_key = file("./id_rsa.pub")
+  project_name   = "myapp"
+
+  instances = { app = { ocpus = 4, memory_gb = 24 } }
+  databases = { main = { display_name = "MainDB", db_name = "MAINDB" } }
+
+  enable_cloudflare    = true
+  cloudflare_api_token = var.CLOUDFLARE_API_TOKEN
+  cloudflare_zone_id   = var.CLOUDFLARE_ZONE_ID
+  domain_name          = "example.com"
+  dns_records          = ["example.com", "app"]
+
+  # Auth0
+  enable_auth0        = true
+  auth0_api_audience  = "https://api.example.com"
+  auth0_jwt_namespace = "https://app.example.com" # must match what your backend reads
+  auth0_callback_urls = ["https://app.example.com", "http://localhost:5173"]
+  auth0_admin_user_id = "auth0|abc123" # optional; auto-assigns admin role
+
+  # GitHub Actions secret sync — also forwards OCI/Cloudflare/Auth0 creds
+  enable_github           = true
+  github_owner            = "your-username"
+  github_repo             = "your-repo"
+  oci_user_ocid           = var.USER_OCID
+  oci_fingerprint         = var.FINGERPRINT
+  oci_private_key         = file(var.OCI_PRIVATE_KEY_PATH)
+  ssh_private_key         = file(var.SSH_PRIVATE_KEY_PATH)
+  ip_address              = var.IP_ADDRESS
+  auth0_domain            = var.AUTH0_DOMAIN
+  auth0_client_id         = var.AUTH0_CLIENT_ID
+  auth0_client_secret     = var.AUTH0_CLIENT_SECRET
+  auth0_m2m_client_id     = var.AUTH0_M2M_CLIENT_ID
+  auth0_m2m_client_secret = var.AUTH0_M2M_CLIENT_SECRET
+
+  # Caller-provided extras (merged on top of auto-derived secrets)
+  github_secrets = {
+    GOOGLE_CLIENT_ID = var.GOOGLE_CLIENT_ID
+  }
+}
+```
+
+See [`examples/with-auth0-and-github/`](examples/with-auth0-and-github/) for the full working example with providers, variables, and tfvars.
 
 ## Providers
 
-The calling module must configure these providers:
+The calling module must configure providers for everything it has enabled:
 
 ```hcl
 provider "oci" {
@@ -143,6 +194,19 @@ provider "oci" {
 # Only needed if enable_cloudflare = true
 provider "cloudflare" {
   api_token = var.CLOUDFLARE_API_TOKEN
+}
+
+# Only needed if enable_auth0 = true
+provider "auth0" {
+  domain        = var.AUTH0_DOMAIN
+  client_id     = var.AUTH0_M2M_CLIENT_ID
+  client_secret = var.AUTH0_M2M_CLIENT_SECRET
+}
+
+# Only needed if enable_github = true
+provider "github" {
+  owner = var.GITHUB_OWNER
+  token = var.GITHUB_TOKEN
 }
 ```
 
@@ -184,6 +248,9 @@ Each instance in the `instances` map accepts:
 | `vault_crypto_endpoint` | Vault crypto endpoint |
 | `vault_key_id` | Master encryption key OCID |
 | `os_namespace` | Object Storage namespace |
+| `auth0_spa_client_id` | Auth0 SPA client ID (null unless `enable_auth0 = true`, sensitive) |
+| `auth0_m2m_client_id` | Auth0 M2M client ID (null unless `enable_auth0 = true`, sensitive) |
+| `auth0_api_audience` | Auth0 API resource server identifier (null unless `enable_auth0 = true`) |
 
 ## Free Tier Limits
 

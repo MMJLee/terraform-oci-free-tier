@@ -1,10 +1,7 @@
-# Example: terraform-oci-free-tier + Auth0 + GitHub Actions secret sync.
+# Example: enable Auth0 + GitHub Actions secret sync via module toggles.
 #
-# Demonstrates how to wire Auth0 and the GitHub provider alongside the module
-# call. Auth0 and GitHub resources live OUTSIDE the module — the module owns
-# the OCI infrastructure, this directory wires up everything else.
-#
-# Replace `example-app` and the backend bucket/namespace with your own.
+# The module owns the auth0 and github resources internally. Caller just sets
+# enable_auth0 = true / enable_github = true and passes the inputs.
 
 terraform {
   required_providers {
@@ -33,13 +30,6 @@ terraform {
       version = ">= 4.0.0"
     }
   }
-
-  # Optional remote state. Create the bucket once, then uncomment.
-  # backend "oci" {
-  #   bucket    = "terraform-state"
-  #   namespace = "YOUR_OS_NAMESPACE"
-  #   key       = "example-app/terraform.tfstate"
-  # }
 }
 
 provider "oci" {
@@ -88,9 +78,39 @@ module "infra" {
 
   bucket_name = "example-app-backups"
 
+  # --- Cloudflare ---
   enable_cloudflare    = true
   cloudflare_api_token = var.CLOUDFLARE_API_TOKEN
   cloudflare_zone_id   = var.CLOUDFLARE_ZONE_ID
   domain_name          = var.DOMAIN_NAME
   dns_records          = [var.DOMAIN_NAME, "app"]
+
+  # --- Auth0 ---
+  enable_auth0        = true
+  auth0_api_audience  = var.AUTH0_API_AUDIENCE
+  auth0_jwt_namespace = var.AUTH0_JWT_NAMESPACE
+  auth0_callback_urls = var.AUTH0_CALLBACK_URLS
+  auth0_admin_user_id = var.AUTH0_ADMIN_USER_ID
+
+  # --- GitHub Actions secret sync ---
+  enable_github = true
+  github_owner  = var.GITHUB_OWNER
+  github_repo   = var.GITHUB_REPO
+
+  # Credentials that get auto-merged into the secrets map (synced as-is)
+  oci_user_ocid           = var.USER_OCID
+  oci_fingerprint         = var.FINGERPRINT
+  oci_private_key         = local.oci_private_key
+  ssh_private_key         = local.ssh_private_key
+  ip_address              = var.IP_ADDRESS
+  auth0_domain            = var.AUTH0_DOMAIN
+  auth0_client_id         = var.AUTH0_CLIENT_ID
+  auth0_client_secret     = var.AUTH0_CLIENT_SECRET
+  auth0_m2m_client_id     = var.AUTH0_M2M_CLIENT_ID
+  auth0_m2m_client_secret = var.AUTH0_M2M_CLIENT_SECRET
+
+  # Project-specific extras (merged on top of the auto-derived secrets)
+  github_secrets = {
+    # GOOGLE_CLIENT_ID = var.GOOGLE_CLIENT_ID
+  }
 }

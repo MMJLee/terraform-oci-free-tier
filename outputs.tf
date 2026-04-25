@@ -80,3 +80,19 @@ output "vault_key_id" {
 output "os_namespace" {
   value = data.oci_objectstorage_namespace.ns.namespace
 }
+
+# --- Auth0 (only populated when enable_auth0 = true) ---
+
+output "auth0_spa_client_id" {
+  value     = var.enable_auth0 ? auth0_client.spa[0].id : null
+  sensitive = true
+}
+
+output "auth0_m2m_client_id" {
+  value     = var.enable_auth0 ? auth0_client.m2m[0].id : null
+  sensitive = true
+}
+
+output "auth0_api_audience" {
+  value = var.enable_auth0 ? auth0_resource_server.api[0].identifier : null
+}
