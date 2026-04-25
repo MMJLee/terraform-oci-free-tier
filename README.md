@@ -1,6 +1,6 @@
 # terraform-oci-free-tier
 
-Reusable Terraform module for OCI Always Free tier infrastructure. Deploys ARM compute instances, Oracle Autonomous Databases, OCI Vault KMS, and optionally a load balancer with Cloudflare SSL.
+Reusable Terraform module for OCI Always Free tier infrastructure. Deploys ARM compute instances, Oracle Autonomous Databases, and OCI Vault KMS, with optional toggles for a Cloudflare-backed load balancer + SSL, an Auth0 application stack (clients, roles, post-login JWT action), and automatic GitHub Actions secret sync of every credential and infrastructure OCID a CI pipeline needs.
 
 ## What it creates
 
@@ -34,8 +34,10 @@ terraform plan    # review what will be created
 terraform apply   # deploy (confirm with 'yes')
 
 # 5. After deploy:
-terraform output                          # see IPs, DB info, SSH commands
-terraform output -raw ssh_commands        # get SSH commands
+terraform output                                   # see IPs, DB info, SSH commands
+terraform output -json ssh_commands                # all SSH commands (map)
+terraform output -raw arm_instance_public_ip 2>/dev/null \
+  || terraform output -json instances | jq -r '.app.public_ip'  # one instance's IP
 ```
 
 ## Usage
@@ -228,6 +230,47 @@ Each instance in the `instances` map accepts:
 | `behind_lb` | bool | `true` | Include in load balancer backend |
 
 **Free tier limits:** Total OCPUs across all instances must not exceed 4. Total memory must not exceed 24GB.
+
+## Auth0 Configuration (`enable_auth0 = true`)
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `auth0_api_audience` | string | `""` | Auth0 API identifier (audience claim), e.g. `https://api.example.com` |
+| `auth0_jwt_namespace` | string | `""` | Custom-claim namespace prefix injected into JWTs by the post-login action. **Must match what your backend reads.** |
+| `auth0_callback_urls` | list(string) | `[]` | Allowed callback / logout / web-origin URLs for the SPA client |
+| `auth0_admin_user_id` | string | `""` | Auth0 user_id (e.g., `auth0\|abc123`) auto-assigned the `admin` role. Empty to skip. |
+| `auth0_spa_name` | string | `"SPA"` | Display name for the SPA client |
+| `auth0_m2m_name` | string | `"Terraform (M2M)"` | Display name for the M2M client |
+| `auth0_api_name` | string | `"API"` | Display name for the API resource server |
+
+The post-login action requires verified email and injects `<namespace>/email`, `<namespace>/name`, and `<namespace>/roles` into both access and ID tokens. Two roles are created: `admin` (with `admin:access` scope on the API) and `user`.
+
+## GitHub Secret Sync Configuration (`enable_github = true`)
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `github_owner` | string | `""` | GitHub username or org that owns the repo |
+| `github_repo` | string | `""` | GitHub repository name |
+| `github_secrets` | map(string) | `{}` | Additional Actions secrets to set on top of the auto-derived ones. Keys become secret names verbatim. |
+| `oci_user_ocid` | string (sensitive) | `""` | Synced as `OCI_USER_OCID` |
+| `oci_fingerprint` | string (sensitive) | `""` | Synced as `OCI_FINGERPRINT` |
+| `oci_private_key` | string (sensitive) | `""` | OCI API private key contents. Synced as `OCI_PRIVATE_KEY`. |
+| `ssh_private_key` | string (sensitive) | `""` | SSH private key contents. Synced as `SSH_PRIVATE_KEY`. |
+| `ip_address` | string | `""` | Public IP (CIDR) of CI runner / dev machine. Synced as `IP_ADDRESS`. |
+| `auth0_domain` / `auth0_client_id` / `auth0_client_secret` / `auth0_m2m_client_id` / `auth0_m2m_client_secret` | string | `""` | Synced as the matching uppercase secret names (only when `enable_auth0 = true`). |
+
+**Auto-derived secrets** (always set when `enable_github = true`):
+
+| Secret | Source |
+|--------|--------|
+| `OCI_TENANCY_OCID` | `var.tenancy_ocid` |
+| `OCI_REGION` | `var.region` |
+| `<NAME>_IP` | one per instance, e.g. `APP_IP`, `WORKER_IP` |
+| `<KEY>_DB_OCID` | one per database, e.g. `MAIN_DB_OCID`, `AGENT_DB_OCID` |
+| `VAULT_OCID` / `VAULT_KEY_ID` / `VAULT_CRYPTO_ENDPOINT` | OCI Vault outputs |
+| `OCI_OS_NAMESPACE` | Object Storage namespace |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ZONE_ID` / `DOMAIN_NAME` | only when `enable_cloudflare = true` |
+| `GH_OWNER` / `GH_REPO` | from `github_owner` / `github_repo` (`GITHUB_*` is reserved by Actions) |
 
 ## Outputs
 

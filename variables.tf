@@ -158,18 +158,21 @@ variable "auth0_admin_user_id" {
 }
 
 variable "auth0_spa_name" {
-  type    = string
-  default = "SPA"
+  type        = string
+  default     = "SPA"
+  description = "Display name for the Auth0 SPA client"
 }
 
 variable "auth0_m2m_name" {
-  type    = string
-  default = "Terraform (M2M)"
+  type        = string
+  default     = "Terraform (M2M)"
+  description = "Display name for the Auth0 M2M client (used by the Auth0 Terraform provider)"
 }
 
 variable "auth0_api_name" {
-  type    = string
-  default = "API"
+  type        = string
+  default     = "API"
+  description = "Display name for the Auth0 API resource server"
 }
 
 # --- GitHub Actions secret sync (optional) ---
@@ -203,15 +206,17 @@ variable "github_secrets" {
 # All optional — only included in the map if set.
 
 variable "oci_user_ocid" {
-  type      = string
-  default   = ""
-  sensitive = true
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "OCI user OCID. Synced as OCI_USER_OCID."
 }
 
 variable "oci_fingerprint" {
-  type      = string
-  default   = ""
-  sensitive = true
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "OCI API key fingerprint. Synced as OCI_FINGERPRINT."
 }
 
 variable "oci_private_key" {
@@ -235,32 +240,37 @@ variable "ip_address" {
 }
 
 variable "auth0_domain" {
-  type    = string
-  default = ""
+  type        = string
+  default     = ""
+  description = "Auth0 tenant domain (e.g., yourtenant.us.auth0.com). Synced as AUTH0_DOMAIN."
 }
 
 variable "auth0_client_id" {
-  type      = string
-  default   = ""
-  sensitive = true
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Auth0 SPA client ID. Synced as AUTH0_CLIENT_ID."
 }
 
 variable "auth0_client_secret" {
-  type      = string
-  default   = ""
-  sensitive = true
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Auth0 SPA client secret. Synced as AUTH0_CLIENT_SECRET."
 }
 
 variable "auth0_m2m_client_id" {
-  type      = string
-  default   = ""
-  sensitive = true
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Auth0 M2M client ID. Synced as AUTH0_M2M_CLIENT_ID."
 }
 
 variable "auth0_m2m_client_secret" {
-  type      = string
-  default   = ""
-  sensitive = true
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "Auth0 M2M client secret. Synced as AUTH0_M2M_CLIENT_SECRET."
 }
 
 # --- Tags ---
